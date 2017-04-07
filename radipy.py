@@ -65,7 +65,7 @@ class Radipy(object):
     auth_success_response = Response()
     output_path = './output'
 
-    convert_table = map(chr, xrange(0, 256))
+    convert_table = map(chr, range(0, 256))
     convert_table[ord(" ")] = "_"
     convert_table[ord("　")] = "_"
 
