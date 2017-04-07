@@ -65,10 +65,6 @@ class Radipy(object):
     auth_success_response = Response()
     output_path = './output'
 
-    convert_table = map(chr, range(0, 256))
-    convert_table[ord(" ")] = "_"
-    convert_table[ord("　")] = "_"
-
     def __init__(self, station_id, ft):
         self.station_id = station_id
         self.ft = ft
@@ -205,7 +201,7 @@ class Radipy(object):
             prog = station.find('.//prog[@ft="{}"]'.format(self.ft))
             to = prog.attrib['to']
 
-        self.title = prog.find('.//title').text.translate(''.join(convert_table))
+        self.title = prog.find('.//title').text.replace(' ', '_').replace('　', '_')
         table = PrettyTable(['title'])
         table.add_row([self.title])
         table.padding_width = 2
