@@ -67,6 +67,7 @@ class Radipy(object):
     stream_url = ''
     area_id = ''
     title = ''
+    output_path = './output'
 
     def __init__(self, station_id, ft):
         self.station_id = station_id
@@ -213,20 +214,21 @@ class Radipy(object):
 
     def _create_aac(self):
         try:
-            if not os.path.exists('./output'.format(self.title)):
-                subprocess.call('mkdir ./output'.format(self.title), shell=True)
-            if not os.path.exists('./output/{}'.format(self.title)):
-                subprocess.call('mkdir ./output/{}'.format(self.title), shell=True)
-            cmd = ('ffmpeg -loglevel fatal '
+            if not os.path.exists(self.output_path):
+                subprocess.call('mkdir {}'.format(self.output_path), shell=True)
+            cmd = ('ffmpeg '
+                   '-loglevel fatal '
                    '-n -headers "X-Radiko-AuthToken: {}" '
                    '-i "{}" '
-                   '-vn -acodec copy "./output/{}/{}.aac"'.format(
+                   '-vn -acodec copy "{}/{}/{}.aac"'.format(
                     self.auth_response.authtoken,
                     self.stream_url,
+                    self.output_path,
                     self.title,
                     '{}_{}'.format(self.title, self.ft[:8])
                     ))
             subprocess.call(cmd, shell=True)
+            print('{}/{}/{}.aac'.format(self.output_path, self.title, '{}_{}'.format(self.title, self.ft[:8])))
             return True
         except:
             return False
