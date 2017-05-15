@@ -58,9 +58,10 @@ class Radipy(object):
     fms2_url = 'https://radiko.jp/v2/api/auth2_fms'
     LANG = 'ja_JP.utf8'
     date = datetime.datetime.strftime(datetime.datetime.now(), '%Y-%m-%d-%H')
-    playerfile='./tmp/player.%s.swf' % date
-    keyfile = './tmp/authkey.%s.jpg' % date
-    playlistfile = './tmp/playlist.%s.m3u8' % date
+    tmp_path='./tmp'
+    playerfile='%s/player.%s.swf' % (tmp_path, date)
+    keyfile = '%s/authkey.%s.jpg' % (tmp_path, date)
+    playlistfile = '%s/playlist.%s.m3u8' % (tmp_path, date)
     auth_response = Response()
     auth_success_response = Response()
     output_path = './output'
@@ -75,8 +76,8 @@ class Radipy(object):
 
     @staticmethod
     def clear():
-        subprocess.call('rm -v ./tmp/*.jpg', shell=True)
-        subprocess.call('rm -v ./tmp/*.swf', shell=True)
+        subprocess.call('rm -v %s/*.jpg' % tmp_path, shell=True)
+        subprocess.call('rm -v %s/*.swf' % tmp_path, shell=True)
 
     def authenticate(self):
         self._get_playerfile()
@@ -106,6 +107,8 @@ class Radipy(object):
         spinner.stop()
 
     def _get_playerfile(self):
+        if not os.path.exists(self.tmp_path):
+            subprocess.call('mkdir {}'.format(self.tmp_path), shell=True)
         if not os.path.exists(self.playerfile):
             print('create playerFile...')
             res = requests.get(self.player_url)
@@ -116,6 +119,8 @@ class Radipy(object):
                     print('PlayerFile is not created.')
 
     def _get_keyfile(self):
+        if not os.path.exists(self.tmp_path):
+            subprocess.call('mkdir {}'.format(self.tmp_path), shell=True)
         if not os.path.exists(self.keyfile):
             print('create KeyFile...')
             subprocess.call('swfextract -b 12 {} -o {}'.format(self.playerfile, self.keyfile), shell=True)
@@ -214,8 +219,9 @@ class Radipy(object):
 
     def _create_aac(self):
         try:
-            if not os.path.exists(self.output_path):
-                subprocess.call('mkdir {}'.format(self.output_path), shell=True)
+            if not os.path.exists('%s%s' % (self.output_path, self.title)):
+                subprocess.call('mkdir -p {}/{}'.format(
+                    self.output_path, self.title), shell=True)
             cmd = ('ffmpeg '
                    '-loglevel fatal '
                    '-n -headers "X-Radiko-AuthToken: {}" '
