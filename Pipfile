@@ -1,0 +1,15 @@
+[[source]]
+url = "https://pypi.python.org/simple"
+verify_ssl = true
+name = "pypi"
+
+[packages]
+click = "==6.7"
+PrettyTable = "==0.7.2"
+requests = "*"
+
+[dev-packages]
+pytest = "*"
+
+[requires]
+python_version = "3.6.2"
