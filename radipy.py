@@ -1,16 +1,30 @@
-import os
 import datetime
 import subprocess
 import sys
 import time
 import base64
-import asyncio
+from pathlib import Path
 from xml.etree import ElementTree as ET
 
 import requests
 import click
 from prettytable import PrettyTable
 import threading
+
+DATE = datetime.datetime.strftime(datetime.datetime.now(), '%Y-%m-%d-%H')
+TMP_PATH = Path('./tmp').resolve()
+if not TMP_PATH.exists():
+    print('Create tmp dir. path: {}'.format(str(TMP_PATH)))
+    TMP_PATH.mkdir(parents=True)
+
+OUTPUT_PATH = Path('./output').resolve()
+if not OUTPUT_PATH.exists():
+    print('Create output dir. path: {}'.format(str(OUTPUT_PATH)))
+    TMP_PATH.mkdir(parents=True)
+
+PLAYERFILE_PATH = Path(TMP_PATH, 'player.{}.swf'.format(DATE))
+KEYFILE_PATH = Path(TMP_PATH, 'authkey.{}.jpg'.format(DATE))
+PLAYLISTFILE_PATH = Path(TMP_PATH, 'playlist.{}.m3u8'.format(DATE))
 
 
 # http://stackoverflow.com/questions/4995733/how-to-create-a-spinning-command-line-cursor-using-pythonのパクリ
@@ -57,35 +71,29 @@ class Radipy(object):
     fms1_url = 'https://radiko.jp/v2/api/auth1_fms'
     fms2_url = 'https://radiko.jp/v2/api/auth2_fms'
     LANG = 'ja_JP.utf8'
-    date = datetime.datetime.strftime(datetime.datetime.now(), '%Y-%m-%d-%H')
-    tmp_path='./tmp'
-    playerfile='%s/player.%s.swf' % (tmp_path, date)
-    keyfile = '%s/authkey.%s.jpg' % (tmp_path, date)
-    playlistfile = '%s/playlist.%s.m3u8' % (tmp_path, date)
     auth_response = Response()
     auth_success_response = Response()
-    output_path = './output'
 
     def __init__(self, station_id, ft):
         self.station_id = station_id
         self.ft = ft
-        partialkey = ''
+        self.partialkey = ''
         self.stream_url = ''
         self.area_id = ''
         self.title = ''
 
     @staticmethod
     def clear():
-        subprocess.call('rm -v %s/*.jpg' % tmp_path, shell=True)
-        subprocess.call('rm -v %s/*.swf' % tmp_path, shell=True)
+        subprocess.call('rm -v {}/*.jpg'.format(TMP_PATH, shell=True))
+        subprocess.call('rm -v {}/*.swf'.format(TMP_PATH, shell=True))
 
     def authenticate(self):
         self._get_playerfile()
         self._get_keyfile()
         self._get_auth1()
-        self._generate_particlekey()
+        self._generate_partialkey()
         self._get_auth2()
-        print('--------------------------')
+        print('-' * 20)
         print('authentication success.')
 
     def get_channels(self):
@@ -107,25 +115,27 @@ class Radipy(object):
         spinner.stop()
 
     def _get_playerfile(self):
-        if not os.path.exists(self.tmp_path):
-            subprocess.call('mkdir {}'.format(self.tmp_path), shell=True)
-        if not os.path.exists(self.playerfile):
+        if PLAYERFILE_PATH.exists():
+            print('playerFile already exists.')
+        else:
             print('create playerFile...')
             res = requests.get(self.player_url)
             if res.status_code == 200:
-                with open(self.playerfile, 'wb') as file:
+                with PLAYERFILE_PATH.open('wb') as file:
                     file.write(res.content)
-                if not os.path.exists(self.playerfile):
-                    print('PlayerFile is not created.')
+            if not PLAYERFILE_PATH.exists():
+                print('playerfile is not created.')
+                exit()
 
     def _get_keyfile(self):
-        if not os.path.exists(self.tmp_path):
-            subprocess.call('mkdir {}'.format(self.tmp_path), shell=True)
-        if not os.path.exists(self.keyfile):
+        if KEYFILE_PATH.exists():
+            print('keyfile already exists.')
+        else:
             print('create KeyFile...')
-            subprocess.call('swfextract -b 12 {} -o {}'.format(self.playerfile, self.keyfile), shell=True)
-            if not os.path.exists(self.keyfile):
-                print('Keyfile is not created.')
+            subprocess.call('swfextract -b 12 {} -o {}'.format(PLAYERFILE_PATH, KEYFILE_PATH), shell=True)
+            if not KEYFILE_PATH.exists():
+                print('keyfile is not created. confirm swfextract is installed.')
+                exit()
 
     def _get_auth1(self):
         print('access auth1_fms...')
@@ -144,12 +154,12 @@ class Radipy(object):
         self.auth_response.offset = int(self.auth_response.headers['x-radiko-keyoffset'])
         self.auth_response.length = int(self.auth_response.headers['x-radiko-keylength'])
 
-    def _generate_particlekey(self):
+    def _generate_partialkey(self):
         print('generate particleKey...')
-        f = open(self.keyfile, 'rb+')
-        f.seek(self.auth_response.offset)
-        data = f.read(self.auth_response.length)
-        self.partialkey = base64.b64encode(data)
+        with KEYFILE_PATH.open('rb+') as file:
+            file.seek(self.auth_response.offset)
+            data = file.read(self.auth_response.length)
+            self.partialkey = base64.b64encode(data)
 
     def _get_auth2(self):
         print('access auth2_fms...')
@@ -169,21 +179,24 @@ class Radipy(object):
     def _get_area_id(self):
         area = self.auth_success_response.body.strip().split(',')
         self.area_id = area[0]
-        print('area_id: %s' % self.area_id)
+        print('area_id: {}'.format(self.area_id))
 
     def _get_area_channels(self):
-        area_api_url = "http://radiko.jp/v2/api/program/today"
-        params = {'area_id': self.area_id}
-        res = requests.get(url=area_api_url, params=params)
+        area_api_url = "http://radiko.jp/v3/station/list/{}.xml".format(self.area_id)
+        res = requests.get(url=area_api_url)
         channels_xml = res.content
         tree = ET.fromstring(channels_xml)
-        channels = tree.findall('.//station')
+        stations = tree.findall('.//station')
         table = PrettyTable(['id', '名前'])
         table.align['id'] = 'l'
         table.align['名前'] = 'l'
         table.padding_width = 2
-        for channel in channels:
-            table.add_row([channel.attrib['id'], channel.find('name').text])
+        for station in stations:
+            row = []
+            for child in station.iter():
+                if child.tag in ('id', 'name'):
+                    row.append(child.text)
+            table.add_row(row)
         print(table)
 
     def _get_stream_url(self):
@@ -219,24 +232,24 @@ class Radipy(object):
 
     def _create_aac(self):
         try:
-            if not os.path.exists('%s%s' % (self.output_path, self.title)):
-                subprocess.call('mkdir -p {}/{}'.format(
-                    self.output_path, self.title), shell=True)
+            program_dir = Path(OUTPUT_PATH, self.title)
+            if not program_dir.exists():
+                print('create program dir: {}'.format(program_dir))
+                program_dir.mkdir()
+            aac_file = Path(program_dir, '{}_{}.aac'.format(self.title, self.ft[:8]))
             cmd = ('ffmpeg '
                    '-loglevel fatal '
                    '-n -headers "X-Radiko-AuthToken: {}" '
                    '-i "{}" '
-                   '-vn -acodec copy "{}/{}/{}.aac"'.format(
+                   '-vn -acodec copy "{}"'.format(
                     self.auth_response.authtoken,
                     self.stream_url,
-                    self.output_path,
-                    self.title,
-                    '{}_{}'.format(self.title, self.ft[:8])
+                    aac_file
                     ))
             subprocess.call(cmd, shell=True)
-            print('{}/{}/{}.aac'.format(self.output_path, self.title, '{}_{}'.format(self.title, self.ft[:8])))
+            print('create aac file: {}'.format(aac_file))
             return True
-        except:
+        except Exception:
             return False
 
 
@@ -254,6 +267,7 @@ def main(area, id, ft, clear):
     if id and ft:
         radipy = Radipy(station_id=id, ft=ft)
         radipy.create()
+
 
 if __name__ == '__main__':
     main()
