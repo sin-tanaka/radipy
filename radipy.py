@@ -106,12 +106,12 @@ class Radipy(object):
         self._get_area_id()
         self._get_stream_url()
         spinner = Spinner()
-        sys.stdout.write("Now Downloading...")
+        print("Now Downloading...")
         spinner.start()
         if self._create_aac():
-            sys.stdout.write('finish!!')
+            print('finish!!')
         else:
-            sys.stdout.write('failed!!')
+            print('failed!!')
         spinner.stop()
 
     def _get_playerfile(self):
