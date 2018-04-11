@@ -60,13 +60,19 @@ Now Downloading.../finish!%
 pip install -r requirements.txt
 ```
 
+Using pipenv:
+
 ```
-brew install ffmpeg swfextract
+pipenv install
+```
+
+```
+brew install ffmpeg swftools
 ```
 
 # Tested
 
-+ MacOS 10.11.6
-+ Python 3.5.2
-+ pip 9.0.1
-+ Homebrew 1.1.11
++ MacOS 10.13.3
++ Python 3.6.4
++ Pipenv 11.9.0
++ Homebrew 1.6.0c
