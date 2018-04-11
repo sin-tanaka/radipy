@@ -1,15 +1,15 @@
+import base64
 import datetime
 import subprocess
 import sys
+import threading
 import time
-import base64
 from pathlib import Path
 from xml.etree import ElementTree as ET
 
-import requests
 import click
+import requests
 from prettytable import PrettyTable
-import threading
 
 DATE = datetime.datetime.strftime(datetime.datetime.now(), '%Y-%m-%d-%H')
 TMP_PATH = Path('./tmp').resolve()
