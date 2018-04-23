@@ -101,6 +101,21 @@ class Radipy(object):
         self._get_area_id()
         self._get_area_channels()
 
+    def get_programs(self):
+        self.authenticate()
+        self._get_area_id()
+        date = datetime.datetime.strftime(datetime.datetime.now(), '%Y%m%d')
+        datetime_api_url = 'http://radiko.jp/v3/program/date/{}/{}.xml'.format(date[:8], self.area_id)
+        res = requests.get(url=datetime_api_url)
+        channels_xml = res.content
+        tree = ET.fromstring(channels_xml)
+        station = tree.find('.//station[@id="{}"]'.format(self.station_id))
+        progs = station.findall('.//prog')
+        for prog in progs:
+            title = prog.find('.//title').text
+            ft = prog.attrib['ft']
+            print(ft, title)
+
     def create(self):
         self.authenticate()
         self._get_area_id()
@@ -188,8 +203,8 @@ class Radipy(object):
         tree = ET.fromstring(channels_xml)
         stations = tree.findall('.//station')
         table = PrettyTable(['id', '名前'])
-        table.align['id'] = 'l'
-        table.align['名前'] = 'l'
+        table.align['station_id'] = 'l'
+        table.align['station_name'] = 'l'
         table.padding_width = 2
         for station in stations:
             row = []
@@ -255,18 +270,22 @@ class Radipy(object):
 
 @click.command(help='Radipy is CLI radiko Downloader written by python3.')
 @click.option('-a', '--area', is_flag=True, help='print station id & name in your area')
+@click.option('-ls', is_flag=True, help='print program titles & start time')
 @click.option('-id', type=str, help='set station id')
-@click.option('-ft', type=str, help='set start time')
+@click.option('-ft', type=str, help='set start datetime str formated by yyyyMMddHHmm e.g. 201804171830')
 @click.option('--clear', is_flag=True, help='clear authkey and player in tmp dir')
-def main(area, id, ft, clear):
+def main(area, id, ft, ls, clear):
     if clear:
         Radipy.clear()
-    if area:
+    elif area:
         radipy = Radipy(0, 0)
         radipy.get_channels()
-    if id and ft:
+    elif id and ft:
         radipy = Radipy(station_id=id, ft=ft)
         radipy.create()
+    elif id and ls:
+        radipy = Radipy(station_id=id, ft=0)
+        radipy.get_programs()
 
 
 if __name__ == '__main__':
