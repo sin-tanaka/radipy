@@ -270,7 +270,7 @@ class Radipy(object):
 
 @click.command(help='Radipy is CLI radiko Downloader written by python3.')
 @click.option('-a', '--area', is_flag=True, help='print station id & name in your area')
-@click.option('-ls', is_flag=True, help='print program titles & start time')
+@click.option('-ls', is_flag=True, help='print program titles & start time. using with -id option')
 @click.option('-id', type=str, help='set station id')
 @click.option('-ft', type=str, help='set start datetime str formated by yyyyMMddHHmm e.g. 201804171830')
 @click.option('--clear', is_flag=True, help='clear authkey and player in tmp dir')
