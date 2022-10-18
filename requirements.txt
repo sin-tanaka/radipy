@@ -6,7 +6,7 @@ idna==2.6
 more-itertools==4.1.0
 pluggy==0.6.0
 prettytable==0.7.2
-py==1.5.3
+py==1.10.0
 pytest==3.5.0
 requests==2.18.4
 six==1.11.0
